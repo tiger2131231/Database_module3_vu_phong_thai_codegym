@@ -1,0 +1,65 @@
+create database InventoryManagementDB;
+use InventoryManagementDB;
+
+CREATE TABLE MATERIALS (
+    MaterialID CHAR(10) PRIMARY KEY,
+    MaterialName NVARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IMPORT_RECEIPT (
+    ImportID CHAR(10) PRIMARY KEY,
+    ImportDate DATE NOT NULL
+);
+
+CREATE TABLE EXPORT_RECEIPT (
+    ExportID CHAR(10) PRIMARY KEY,
+    ExportDate DATE NOT NULL
+);
+
+CREATE TABLE ORDER_FORM (
+    OrderID CHAR(10) PRIMARY KEY,
+    OrderDate DATE NOT NULL
+);
+
+CREATE TABLE SUPPLIER (
+    SupplierID CHAR(10) PRIMARY KEY,
+    SupplierName NVARCHAR(100) NOT NULL,
+    Address NVARCHAR(200),
+    Phone VARCHAR(15)
+);
+
+CREATE TABLE EXPORT_DETAIL (
+    ExportID CHAR(10),
+    MaterialID CHAR(10),
+    ExportPrice DECIMAL(18,2) NOT NULL,
+    ExportQuantity INT NOT NULL,
+    PRIMARY KEY (ExportID, MaterialID),
+    FOREIGN KEY (ExportID) REFERENCES EXPORT_RECEIPT(ExportID),
+    FOREIGN KEY (MaterialID) REFERENCES MATERIALS(MaterialID)
+);
+
+CREATE TABLE IMPORT_DETAIL (
+    ImportID CHAR(10),
+    MaterialID CHAR(10),
+    ImportPrice DECIMAL(18,2) NOT NULL,
+    ImportQuantity INT NOT NULL,
+    PRIMARY KEY (ImportID, MaterialID),
+    FOREIGN KEY (ImportID) REFERENCES IMPORT_RECEIPT(ImportID),
+    FOREIGN KEY (MaterialID) REFERENCES MATERIALS(MaterialID)
+);
+
+CREATE TABLE ORDER_DETAIL (
+    OrderID CHAR(10),
+    MaterialID CHAR(10),
+    PRIMARY KEY (OrderID, MaterialID),
+    FOREIGN KEY (OrderID) REFERENCES ORDER_FORM(OrderID),
+    FOREIGN KEY (MaterialID) REFERENCES MATERIALS(MaterialID)
+);
+
+CREATE TABLE SUPPLY (
+    SupplierID CHAR(10),
+    OrderID CHAR(10),
+    PRIMARY KEY (SupplierID, OrderID),
+    FOREIGN KEY (SupplierID) REFERENCES SUPPLIER(SupplierID),
+    FOREIGN KEY (OrderID) REFERENCES ORDER_FORM(OrderID)
+);
