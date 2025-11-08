@@ -619,16 +619,16 @@ WHERE YEAR(h.ngay_lam_hop_dong) = 2020
 GROUP BY h.ma_hop_dong, nv.ho_ten, k.ho_ten, k.so_dien_thoai, dv.ten_dich_vu, h.tien_dat_coc;
 
 -- 12
--- Bước 1: số lần sử dụng mỗi dịch vụ đi kèm
+
 WITH usage_count AS (
   SELECT hdc.ma_dich_vu_di_kem,
          COUNT(*) AS so_lan_su_dung
   FROM hop_dong_chi_tiet hdc
   JOIN hop_dong h ON hdc.ma_hop_dong = h.ma_hop_dong
-  -- chỉ tính những hợp đồng thực sự (nếu muốn giới hạn theo năm, thêm điều kiện)
+
   GROUP BY hdc.ma_dich_vu_di_kem
 )
--- Bước 2: lấy max rồi join để chọn các dịch vụ có số lần = max
+
 SELECT dvdk.*, uc.so_lan_su_dung
 FROM usage_count uc
 JOIN (
@@ -641,7 +641,7 @@ JOIN dich_vu_di_kem dvdk ON dvdk.ma_dich_vu_di_kem = uc.ma_dich_vu_di_kem;
 WITH dv_usage AS (
   SELECT hdc.ma_dich_vu_di_kem,
          COUNT(*) AS so_lan_su_dung,
-         MIN(hdc.ma_hop_dong) AS any_hop_dong -- lấy 1 hợp đồng chứa lần sử dụng đó để hiển thị ma_hop_dong
+         MIN(hdc.ma_hop_dong) AS any_hop_dong 
   FROM hop_dong_chi_tiet hdc
   GROUP BY hdc.ma_dich_vu_di_kem
 )
@@ -652,7 +652,7 @@ SELECT
   du.so_lan_su_dung
 FROM dv_usage du
 JOIN dich_vu_di_kem dvdk ON du.ma_dich_vu_di_kem = dvdk.ma_dich_vu_di_kem
--- nối lên hợp đồng → dịch vụ chính → loại dịch vụ để lấy ten_loai_dich_vu (nếu hợp đồng có ma_dich_vu)
+
 LEFT JOIN hop_dong h ON h.ma_hop_dong = du.any_hop_dong
 LEFT JOIN dich_vu dv ON h.ma_dich_vu = dv.ma_dich_vu
 LEFT JOIN loai_dich_vu ldv ON dv.ma_loai_dich_vu = ldv.ma_loai_dich_vu
@@ -691,80 +691,6 @@ WHERE NOT EXISTS (
   WHERE h.ma_nhan_vien = nhan_vien.ma_nhan_vien
     AND YEAR(h.ngay_lam_hop_dong) BETWEEN 2019 AND 2021
 );
-
--- 16
--- Cách làm: cập nhật mã loại khách của khách hàng (ma_loai_khach) sang mã của 'Diamond'
-UPDATE khach_hang k
-JOIN (
-  SELECT h.ma_khach_hang,
-         SUM( IFNULL(dv.chi_phi_thue,0) + IFNULL(hdc.so_luong * dvdk.gia,0) ) AS total_2021
-  FROM hop_dong h
-  LEFT JOIN dich_vu dv ON h.ma_dich_vu = dv.ma_dich_vu
-  LEFT JOIN hop_dong_chi_tiet hdc ON h.ma_hop_dong = hdc.ma_hop_dong
-  LEFT JOIN dich_vu_di_kem dvdk ON hdc.ma_dich_vu_di_kem = dvdk.ma_dich_vu_di_kem
-  WHERE YEAR(h.ngay_lam_hop_dong) = 2021
-  GROUP BY h.ma_khach_hang
-) t ON k.ma_khach_hang = t.ma_khach_hang
-SET k.ma_loai_khach = (
-  SELECT ma_loai_khach FROM loai_khach WHERE ten_loai_khach = 'Diamond' LIMIT 1
-)
-WHERE k.ma_loai_khach = (
-  SELECT ma_loai_khach FROM loai_khach WHERE ten_loai_khach = 'Platinium' LIMIT 1
-)
-AND t.total_2021 > 10000000;
-
--- 17
--- 1) Tạo bảng tạm chứa danh sách khách hàng có hợp đồng trước 2021
-CREATE TEMPORARY TABLE tmp_customers_to_delete AS
-SELECT DISTINCT ma_khach_hang
-FROM hop_dong
-WHERE YEAR(ngay_lam_hop_dong) < 2021;
-
--- 2) Xóa chi tiết hợp đồng của các hợp đồng thuộc những khách hàng này
-DELETE hdc
-FROM hop_dong_chi_tiet hdc
-JOIN hop_dong h ON hdc.ma_hop_dong = h.ma_hop_dong
-WHERE h.ma_khach_hang IN (SELECT ma_khach_hang FROM tmp_customers_to_delete)
-  AND YEAR(h.ngay_lam_hop_dong) < 2021;
-
--- 3) Xóa hợp đồng thuộc các khách hàng này (những hợp đồng < 2021)
-DELETE FROM hop_dong
-WHERE ma_khach_hang IN (SELECT ma_khach_hang FROM tmp_customers_to_delete)
-  AND YEAR(ngay_lam_hop_dong) < 2021;
-
--- 4) Xóa khách hàng trong tmp (chú ý: nếu khách hàng còn hợp đồng >=2021, điều kiện trên có thể xóa cả những khách có hợp đồng sau 2021; nếu muốn chỉ xóa KH mà *chỉ* có hợp đồng trước 2021, cần filter thêm)
-DELETE FROM khach_hang
-WHERE ma_khach_hang IN (SELECT ma_khach_hang FROM tmp_customers_to_delete);
-
-DELETE FROM khach_hang
-WHERE ma_khach_hang IN (
-  SELECT ma_khach_hang FROM tmp_customers_to_delete
-)
-AND NOT EXISTS (
-  SELECT 1 FROM hop_dong h2
-  WHERE h2.ma_khach_hang = khach_hang.ma_khach_hang
-    AND YEAR(h2.ngay_lam_hop_dong) >= 2021
-);
-
--- 18
-UPDATE dich_vu_di_kem dvdk
-JOIN (
-  SELECT hdc.ma_dich_vu_di_kem, SUM(hdc.so_luong) AS total_qty
-  FROM hop_dong_chi_tiet hdc
-  JOIN hop_dong h ON hdc.ma_hop_dong = h.ma_hop_dong
-  WHERE YEAR(h.ngay_lam_hop_dong) = 2020
-  GROUP BY hdc.ma_dich_vu_di_kem
-  HAVING SUM(hdc.so_luong) > 10
-) t ON dvdk.ma_dich_vu_di_kem = t.ma_dich_vu_di_kem
-SET dvdk.gia = dvdk.gia * 2;
-
--- 19
-SELECT 'NV' AS type, ma_nhan_vien AS id, ho_ten, email, so_dien_thoai, ngay_sinh, dia_chi
-FROM nhan_vien
-UNION ALL
-SELECT 'KH' AS type, ma_khach_hang AS id, ho_ten, email, so_dien_thoai, ngay_sinh, dia_chi
-FROM khach_hang;
-
 
 
 
