@@ -393,43 +393,6 @@ JOIN (
 ) m ON uc.so_lan_su_dung = m.max_usage
 JOIN dich_vu_di_kem dvdk ON dvdk.ma_dich_vu_di_kem = uc.ma_dich_vu_di_kem;
 
--- 13	
--- Tính số lần sử dụng mỗi ma_dich_vu_di_kem
-WITH dv_usage AS (
-  SELECT hdc.ma_dich_vu_di_kem,
-         COUNT(*) AS so_lan_su_dung,
-         MIN(hdc.ma_hop_dong) AS any_hop_dong 
-  FROM hop_dong_chi_tiet hdc
-  GROUP BY hdc.ma_dich_vu_di_kem
-)
-SELECT
-  du.any_hop_dong AS ma_hop_dong,
-  ldv.ten_loai_dich_vu,
-  dvdk.ten_dich_vu_di_kem,
-  du.so_lan_su_dung
-FROM dv_usage du
-JOIN dich_vu_di_kem dvdk ON du.ma_dich_vu_di_kem = dvdk.ma_dich_vu_di_kem
-
-LEFT JOIN hop_dong h ON h.ma_hop_dong = du.any_hop_dong
-LEFT JOIN dich_vu dv ON h.ma_dich_vu = dv.ma_dich_vu
-LEFT JOIN loai_dich_vu ldv ON dv.ma_loai_dich_vu = ldv.ma_loai_dich_vu
-WHERE du.so_lan_su_dung = 1;
-
--- 14
-SELECT nv.ma_nhan_vien,
-       nv.ho_ten,
-       td.ten_trinh_do,
-       bp.ten_bo_phan,
-       nv.so_dien_thoai,
-       nv.dia_chi,
-       COUNT(h.ma_hop_dong) AS tong_so_hop_dong_2020_2021
-FROM nhan_vien nv
-LEFT JOIN trinh_do td ON nv.ma_trinh_do = td.ma_trinh_do
-LEFT JOIN bo_phan bp ON nv.ma_bo_phan = bp.ma_bo_phan
-LEFT JOIN hop_dong h ON nv.ma_nhan_vien = h.ma_nhan_vien
-  AND YEAR(h.ngay_lam_hop_dong) BETWEEN 2020 AND 2021
-GROUP BY nv.ma_nhan_vien, nv.ho_ten, td.ten_trinh_do, bp.ten_bo_phan, nv.so_dien_thoai, nv.dia_chi
-HAVING COUNT(h.ma_hop_dong) <= 3;
 
 -- 15
 -- Kiểm tra danh sách nhân viên sẽ bị xóa
