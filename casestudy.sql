@@ -121,14 +121,6 @@ CREATE TABLE hop_dong_chi_tiet (
 
 USE QuanLyDichVu;
 ALTER TABLE dich_vu ADD COLUMN dich_vu_mien_phi_di_kem VARCHAR(100);
-
-INSERT INTO loai_dich_vu (ma_loai_dich_vu, ten_loai_dich_vu)
-VALUES 
-(1,'Villa'),
-(2,'House'),
-(3,'Room')
-ON DUPLICATE KEY UPDATE ten_loai_dich_vu = VALUES(ten_loai_dich_vu);
-
 -- CHÈN DỮ LIỆU
 
 -- Bảng vi_tri
@@ -244,6 +236,7 @@ INSERT INTO hop_dong_chi_tiet VALUES
 (6,1,1,3),
 (7,2,1,2),
 (8,2,12,2);
+
 
 USE QuanLyDichVu;
 -- Truy vấn dữ liệu
